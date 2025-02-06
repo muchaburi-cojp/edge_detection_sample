@@ -1,4 +1,7 @@
+import 'package:edge_detection/edge_detection.dart';
+import 'package:external_path/external_path.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(const MyApp());
@@ -30,12 +33,22 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  String _imagePath = '';
 
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
+  Future<void> getImage() async {
+    final path = ExternalPath.getExternalStoragePublicDirectory(ExternalPath.DIRECTORY_PICTURES);
+    // ExternalPath
+    final imagePath = '$path${(DateTime.now().millisecondsSinceEpoch / 1000).round()}.jpeg';
+    try {
+      bool isSuccess = await EdgeDetection.detectEdge(imagePath);
+      if (isSuccess) {
+        setState(() {
+          _imagePath = imagePath;
+        });
+      }
+    } on PlatformException catch (e) {
+      debugPrint('エラーでごわす');
+    }
   }
 
   @override
@@ -49,20 +62,18 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+            if (_imagePath.isNotEmpty) ...{
+              Image.asset(_imagePath),
+            } else ...{
+              const Text('Empty'),
+            },
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        onPressed: getImage,
         tooltip: 'Increment',
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.camera_alt),
       ),
     );
   }
