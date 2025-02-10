@@ -1,7 +1,10 @@
-import 'package:edge_detection/edge_detection.dart';
-import 'package:external_path/external_path.dart';
+import 'dart:io';
+
+import 'package:edge_detection_plus/edge_detection_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   runApp(const MyApp());
@@ -36,17 +39,26 @@ class _MyHomePageState extends State<MyHomePage> {
   String _imagePath = '';
 
   Future<void> getImage() async {
-    final path = ExternalPath.getExternalStoragePublicDirectory(ExternalPath.DIRECTORY_PICTURES);
-    // ExternalPath
-    final imagePath = '$path${(DateTime.now().millisecondsSinceEpoch / 1000).round()}.jpeg';
+    bool isCameraGranted = await Permission.camera.request().isGranted;
+    if (!isCameraGranted) {
+      isCameraGranted = await Permission.camera.request() == PermissionStatus.granted;
+    }
+
+    if (!isCameraGranted) {
+      return;
+    }
+
+    String imagePath = join((await getApplicationSupportDirectory()).path, "${(DateTime.now().millisecondsSinceEpoch / 1000).round()}.jpeg");
+
     try {
-      bool isSuccess = await EdgeDetection.detectEdge(imagePath);
+      bool isSuccess = await EdgeDetectionPlus.detectEdge(imagePath);
       if (isSuccess) {
         setState(() {
           _imagePath = imagePath;
         });
       }
-    } on PlatformException catch (e) {
+    } catch (e) {
+      debugPrint(e.toString());
       debugPrint('エラーでごわす');
     }
   }
@@ -63,7 +75,7 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             if (_imagePath.isNotEmpty) ...{
-              Image.asset(_imagePath),
+              Image.file(File(_imagePath)),
             } else ...{
               const Text('Empty'),
             },
